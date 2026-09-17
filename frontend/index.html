@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Snippet Manager</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <div class="container">
+        <h1>Developer Snippet Manager</h1>
+
+        <!-- Search Bar -->
+        <div class="search-bar">
+            <input type="text" id="searchTitle" placeholder="Search by title...">
+            <input type="text" id="searchLanguage" placeholder="Search by language...">
+            <button onclick="searchSnippets()">Search</button>
+            <button onclick="loadSnippets()">Clear</button>
+        </div>
+
+        <!-- Add / Edit Form -->
+        <div class="form-section">
+            <h2 id="formTitle">Add New Snippet</h2>
+            <input type="hidden" id="editId">
+            <input type="text" id="title" placeholder="Title *" required>
+            <input type="text" id="language" placeholder="Language (e.g. Java, Python) *" required>
+            <textarea id="description" placeholder="Description (optional)" rows="2"></textarea>
+            <textarea id="code" placeholder="Paste your code here *" rows="6" required></textarea>
+            <div class="form-buttons">
+                <button onclick="saveSnippet()">Save Snippet</button>
+                <button onclick="cancelEdit()" id="cancelBtn" style="display:none;">Cancel</button>
+            </div>
+        </div>
+
+        <!-- Snippet List -->
+        <div id="snippetList"></div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>

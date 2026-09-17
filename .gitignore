@@ -1,0 +1,23 @@
+# Compiled output
+backend/target/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE files
+.idea/
+.vscode/
+*.iml
+*.iws
+*.ipr
+
+# Logs
+*.log
+
+# Environment / secrets
+.env
+*.env
+
+# Node (just in case)
+node_modules/
