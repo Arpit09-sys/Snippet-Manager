@@ -22,6 +22,81 @@ h1 {
     font-size: 1.8rem;
 }
 
+/* Auth Header */
+.auth-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: #fff;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    padding: 12px 18px;
+    margin-bottom: 20px;
+}
+
+.auth-user-info span {
+    font-size: 0.95rem;
+    color: #444;
+}
+
+.auth-user-info strong {
+    color: #2c3e50;
+}
+
+.btn-logout {
+    background-color: #7f8c8d;
+    padding: 6px 14px;
+    font-size: 0.85rem;
+}
+
+.btn-logout:hover {
+    background-color: #636e72;
+}
+
+/* Auth Card & Tabs */
+.auth-card {
+    max-width: 440px;
+    margin: 20px auto 30px auto;
+}
+
+.auth-tabs {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 16px;
+}
+
+.tab-btn {
+    flex: 1;
+    background-color: #e0e0e0;
+    color: #555;
+    font-weight: bold;
+    padding: 8px 12px;
+}
+
+.tab-btn.active {
+    background-color: #4a90d9;
+    color: #fff;
+}
+
+.auth-message {
+    padding: 10px 14px;
+    border-radius: 4px;
+    margin-bottom: 14px;
+    font-size: 0.9rem;
+}
+
+.auth-message.error {
+    background-color: #fde8e8;
+    color: #c0392b;
+    border: 1px solid #f8b4b4;
+}
+
+.auth-message.success {
+    background-color: #e8f8f0;
+    color: #1e8449;
+    border: 1px solid #a3e4d7;
+}
+
 /* Search Bar */
 .search-bar {
     display: flex;
@@ -82,6 +157,7 @@ button {
     font-size: 0.9rem;
     background-color: #4a90d9;
     color: white;
+    transition: background-color 0.15s ease;
 }
 
 button:hover {
@@ -182,5 +258,10 @@ button:hover {
     }
     .snippet-header {
         flex-wrap: wrap;
+    }
+    .auth-header {
+        flex-direction: column;
+        gap: 10px;
+        align-items: flex-start;
     }
 }

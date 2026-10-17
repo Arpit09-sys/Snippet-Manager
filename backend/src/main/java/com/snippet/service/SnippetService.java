@@ -1,6 +1,7 @@
 package com.snippet.service;
 
 import com.snippet.entity.Snippet;
+import com.snippet.entity.User;
 import com.snippet.repository.SnippetRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -15,57 +16,78 @@ public class SnippetService {
     @Autowired
     private SnippetRepository snippetRepository;
 
-    // Get all snippets
-    public List<Snippet> getAllSnippets() {
-        return snippetRepository.findAll();
+    // Get all snippets belonging to the authenticated user
+    public List<Snippet> getAllSnippetsForUser(User user) {
+        return snippetRepository.findByUser(user);
     }
 
-    // Get one snippet by id
-    public Optional<Snippet> getSnippetById(String id) {
-        return snippetRepository.findById(id);
+    // Get one snippet by id only if it belongs to the authenticated user
+    public Optional<Snippet> getSnippetByIdForUser(Long id, User user) {
+        return snippetRepository.findByIdAndUser(id, user);
     }
 
-    // Create a new snippet
-    public Snippet createSnippet(Snippet snippet) {
+    // Create a new snippet assigned to the authenticated user
+    public Snippet createSnippet(Snippet snippet, User user) {
+        validateSnippet(snippet);
+        snippet.setUser(user);
         snippet.setCreatedAt(LocalDateTime.now());
         return snippetRepository.save(snippet);
     }
 
-    // Update an existing snippet
-    public Optional<Snippet> updateSnippet(String id, Snippet updatedData) {
-        Optional<Snippet> existing = snippetRepository.findById(id);
+    // Update an existing snippet only if it belongs to the authenticated user
+    public Optional<Snippet> updateSnippet(Long id, Snippet updatedData, User user) {
+        Optional<Snippet> existing = snippetRepository.findByIdAndUser(id, user);
         if (existing.isEmpty()) {
             return Optional.empty();
         }
 
+        validateSnippet(updatedData);
+
         Snippet snippet = existing.get();
-        snippet.setTitle(updatedData.getTitle());
-        snippet.setCode(updatedData.getCode());
-        snippet.setLanguage(updatedData.getLanguage());
-        snippet.setDescription(updatedData.getDescription());
+        snippet.setTitle(updatedData.getTitle().trim());
+        snippet.setLanguage(updatedData.getLanguage().trim());
+        snippet.setCode(updatedData.getCode().trim());
+        snippet.setDescription(updatedData.getDescription() != null ? updatedData.getDescription().trim() : null);
 
         return Optional.of(snippetRepository.save(snippet));
     }
 
-    // Delete a snippet
-    public boolean deleteSnippet(String id) {
-        if (!snippetRepository.existsById(id)) {
+    // Delete a snippet only if it belongs to the authenticated user
+    public boolean deleteSnippet(Long id, User user) {
+        Optional<Snippet> existing = snippetRepository.findByIdAndUser(id, user);
+        if (existing.isEmpty()) {
             return false;
         }
-        snippetRepository.deleteById(id);
+        snippetRepository.delete(existing.get());
         return true;
     }
 
-    // Search by language and/or title
-    public List<Snippet> searchSnippets(String language, String title) {
-        if (language != null && title != null) {
-            return snippetRepository.findByLanguageIgnoreCaseAndTitleContainingIgnoreCase(language, title);
-        } else if (language != null) {
-            return snippetRepository.findByLanguageIgnoreCase(language);
-        } else if (title != null) {
-            return snippetRepository.findByTitleContainingIgnoreCase(title);
+    // Search user's snippets by language and/or title
+    public List<Snippet> searchSnippetsForUser(String language, String title, User user) {
+        String cleanLanguage = (language != null && !language.trim().isEmpty()) ? language.trim() : null;
+        String cleanTitle = (title != null && !title.trim().isEmpty()) ? title.trim() : null;
+
+        if (cleanLanguage != null && cleanTitle != null) {
+            return snippetRepository.findByUserAndLanguageIgnoreCaseAndTitleContainingIgnoreCase(user, cleanLanguage, cleanTitle);
+        } else if (cleanLanguage != null) {
+            return snippetRepository.findByUserAndLanguageIgnoreCase(user, cleanLanguage);
+        } else if (cleanTitle != null) {
+            return snippetRepository.findByUserAndTitleContainingIgnoreCase(user, cleanTitle);
         } else {
-            return snippetRepository.findAll();
+            return snippetRepository.findByUser(user);
+        }
+    }
+
+    // Basic input validation
+    private void validateSnippet(Snippet snippet) {
+        if (snippet.getTitle() == null || snippet.getTitle().trim().isEmpty()) {
+            throw new IllegalArgumentException("Snippet title is required");
+        }
+        if (snippet.getLanguage() == null || snippet.getLanguage().trim().isEmpty()) {
+            throw new IllegalArgumentException("Programming language is required");
+        }
+        if (snippet.getCode() == null || snippet.getCode().trim().isEmpty()) {
+            throw new IllegalArgumentException("Snippet code is required");
         }
     }
 }

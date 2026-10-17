@@ -1,91 +1,129 @@
-# Developer Snippet Manager
+# Developer Snippet Manager (Secure Edition)
 
-A simple web app to save, organize, and search code snippets. Built with Spring Boot, MongoDB, and plain HTML/CSS/JS.
+A secure web application to save, organize, and search code snippets. Built with Spring Boot, Spring Data JPA, MySQL, Spring Security (BCrypt & session-based authentication), and Vanilla HTML/CSS/JavaScript.
 
 ## Project Structure
 
 ```
 snippet-manager/
 ├── backend/
-│   ├── src/main/java/com/snippet/
-│   │   ├── controller/SnippetController.java   ← 6 REST endpoints
-│   │   ├── entity/Snippet.java                 ← MongoDB document
-│   │   ├── repository/SnippetRepository.java   ← DB queries
-│   │   ├── service/SnippetService.java         ← Business logic
-│   │   └── SnippetManagerApplication.java      ← App entry point
-│   └── src/main/resources/application.properties
+│   ├── pom.xml                                   ← Maven configuration with JPA, MySQL, Spring Security
+│   ├── src/
+│   │   ├── main/
+│   │   │   ├── java/com/snippet/
+│   │   │   │   ├── config/
+│   │   │   │   │   └── SecurityConfig.java       ← Spring Security filter chain, BCrypt, CSRF, sessions
+│   │   │   │   ├── controller/
+│   │   │   │   │   ├── AuthController.java       ← Register, login, status, CSRF endpoints
+│   │   │   │   │   └── SnippetController.java    ← User-scoped snippet CRUD & search
+│   │   │   │   ├── entity/
+│   │   │   │   │   ├── Snippet.java              ← JPA entity mapped to MySQL 'snippets' table
+│   │   │   │   │   └── User.java                 ← JPA entity mapped to MySQL 'users' table
+│   │   │   │   ├── repository/
+│   │   │   │   │   ├── SnippetRepository.java    ← Spring Data JPA with user-ownership queries
+│   │   │   │   │   └── UserRepository.java       ← JPA repository for user lookup & existence checks
+│   │   │   │   ├── service/
+│   │   │   │   │   ├── CustomUserDetailsService.java ← Loads user for Spring Security authentication
+│   │   │   │   │   ├── SnippetService.java       ← Business logic & ownership enforcement
+│   │   │   │   │   └── UserService.java          ← Registration with BCrypt hashing
+│   │   │   │   └── SnippetManagerApplication.java← Spring Boot main entry point
+│   │   │   └── resources/
+│   │   │       ├── application.properties        ← MySQL connection & Hibernate settings
+│   │   │       └── static/                       ← Frontend files served directly by Spring Boot
+│   │   └── test/
+│   │       └── java/com/snippet/
+│   │           └── SnippetSecurityAndCrudIntegrationTest.java ← Automated test suite (10 test cases)
 ├── frontend/
-│   ├── index.html   ← Single page UI
-│   ├── style.css    ← Basic styling
-│   └── script.js    ← Fetch API calls
+│   ├── index.html                                ← UI with Login/Register tabs & Snippet Manager
+│   ├── style.css                                 ← Clean, responsive styling
+│   └── script.js                                 ← Session auth, CSRF handling & Fetch API calls
 └── README.md
 ```
 
+---
+
 ## Prerequisites
 
-- Java 17+
-- Maven
-- MongoDB running locally on port 27017
+- **Java 17+** (Java 21 LTS supported)
+- **Maven**
+- **MySQL Server** running on port 3306
 
-## Setup & Run
+---
 
-### 1. Start MongoDB
+## Database Setup
 
-Make sure MongoDB is running locally:
+1. Start your local MySQL service:
+   ```bash
+   brew services start mysql    # macOS (Homebrew)
+   # OR: sudo systemctl start mysql  # Linux
+   ```
 
-```bash
-mongod
-```
+2. Create the `snippetdb` database:
+   ```bash
+   mysql -u root -e "CREATE DATABASE IF NOT EXISTS snippetdb;"
+   ```
 
-MongoDB will use the `snippetdb` database automatically (created on first insert).
+3. Spring Boot with Hibernate automatically generates the required `users` and `snippets` tables and foreign keys upon application startup (`spring.jpa.hibernate.ddl-auto=update`).
 
-### 2. Run the Backend
+---
 
+## Running the Application
+
+### 1. Run the Backend
 ```bash
 cd backend
 mvn spring-boot:run
 ```
 
-The API will be available at `http://localhost:8080`
+The application will start on `http://localhost:8080`.
 
-### 3. Open the Frontend
+### 2. Access the Frontend
+Open `http://localhost:8080` directly in your browser. (Alternatively, you can open `frontend/index.html` directly in your browser; the API calls will communicate with `http://localhost:8080`).
 
-Open `frontend/index.html` directly in your browser. No server needed for the frontend.
+---
 
-> **Note:** Since the frontend opens as a local file, make sure the backend is running first. The frontend calls `http://localhost:8080`.
+## Running Automated Tests
+
+To run the complete automated integration test suite:
+```bash
+cd backend
+mvn test
+```
+
+---
 
 ## API Endpoints
 
+### Authentication (`/api/auth`)
+| Method | Endpoint | Description | Public / Protected |
+|--------|----------|-------------|--------------------|
+| POST | `/api/auth/register` | Register a new user | Public |
+| POST | `/api/auth/login` | Login and establish session | Public |
+| POST | `/api/auth/logout` | Invalidate session & clear cookies | Authenticated |
+| GET | `/api/auth/status` | Check current authenticated user | Public |
+| GET | `/api/auth/csrf` | Get CSRF token for state-changing requests | Public |
+
+### Snippets (`/api/snippets`)
+*All snippet endpoints require authentication. Operations are strictly isolated to the authenticated user.*
+
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| GET | `/api/snippets` | Get all snippets |
-| GET | `/api/snippets/{id}` | Get snippet by ID |
-| POST | `/api/snippets` | Create new snippet |
-| PUT | `/api/snippets/{id}` | Update snippet |
-| DELETE | `/api/snippets/{id}` | Delete snippet |
-| GET | `/api/snippets/search?language=java` | Search by language |
-| GET | `/api/snippets/search?title=loop` | Search by title |
-| GET | `/api/snippets/search?language=java&title=loop` | Search by both |
+| GET | `/api/snippets` | Get all snippets for the logged-in user |
+| GET | `/api/snippets/{id}` | Get snippet by ID (returns 404 if owned by someone else) |
+| POST | `/api/snippets` | Create a new snippet owned by the logged-in user |
+| PUT | `/api/snippets/{id}` | Update snippet (returns 404 if owned by someone else) |
+| DELETE | `/api/snippets/{id}` | Delete snippet (returns 404 if owned by someone else) |
+| GET | `/api/snippets/search?language=java` | Search logged-in user's snippets by language |
+| GET | `/api/snippets/search?title=sort` | Search logged-in user's snippets by title |
+| GET | `/api/snippets/search?language=java&title=sort` | Search by both language and title |
 
-### Example POST Request Body
+---
 
-```json
-{
-  "title": "Reverse a String",
-  "language": "Java",
-  "description": "Simple string reversal using StringBuilder",
-  "code": "String reversed = new StringBuilder(str).reverse().toString();"
-}
-```
+## Key Cybersecurity Features
 
-## How It Works
-
-1. **Entity** (`Snippet.java`) — defines the MongoDB document with fields: `id`, `title`, `code`, `language`, `description`, `createdAt`
-2. **Repository** (`SnippetRepository.java`) — extends `MongoRepository`, has custom query methods for search
-3. **Service** (`SnippetService.java`) — handles CRUD logic, sets `createdAt` on creation
-4. **Controller** (`SnippetController.java`) — maps HTTP requests to service methods, returns JSON responses
-5. **Frontend** (`script.js`) — uses `fetch()` to call the API, renders snippet cards with Edit/Delete/Copy buttons
-
-## MongoDB Collection
-
-The app uses the `snippetdb` database and a `snippets` collection. There is an index on the `language` field for faster language-based searches.
+1. **BCrypt Password Hashing**: Passwords are never stored in plain text. Stored passwords use BCrypt with salting and work factor 10.
+2. **Session-Based Authentication**: Uses standard Spring Security HTTP sessions with `JSESSIONID` cookie (`HttpOnly`).
+3. **User-Scoped Authorization & Ownership**: The backend resolves the authenticated user from the session and enforces that users can only read, edit, or delete snippets belonging to them. Tampered IDs return `404 Not Found`.
+4. **CSRF Protection**: State-changing requests (POST, PUT, DELETE) require a valid CSRF token using `CookieCsrfTokenRepository.withHttpOnlyFalse()` and the `X-XSRF-TOKEN` header.
+5. **SQL Injection Defense**: Built entirely on Spring Data JPA parameterized queries and method derivations—no raw string concatenations.
+6. **XSS Protection**: User-provided content is sanitized before rendering in the DOM using `escapeHtml()`.

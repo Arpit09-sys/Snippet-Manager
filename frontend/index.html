@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Snippet Manager</title>
+    <title>Developer Snippet Manager</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -11,30 +11,59 @@
     <div class="container">
         <h1>Developer Snippet Manager</h1>
 
-        <!-- Search Bar -->
-        <div class="search-bar">
-            <input type="text" id="searchTitle" placeholder="Search by title...">
-            <input type="text" id="searchLanguage" placeholder="Search by language...">
-            <button onclick="searchSnippets()">Search</button>
-            <button onclick="loadSnippets()">Clear</button>
-        </div>
-
-        <!-- Add / Edit Form -->
-        <div class="form-section">
-            <h2 id="formTitle">Add New Snippet</h2>
-            <input type="hidden" id="editId">
-            <input type="text" id="title" placeholder="Title *" required>
-            <input type="text" id="language" placeholder="Language (e.g. Java, Python) *" required>
-            <textarea id="description" placeholder="Description (optional)" rows="2"></textarea>
-            <textarea id="code" placeholder="Paste your code here *" rows="6" required></textarea>
-            <div class="form-buttons">
-                <button onclick="saveSnippet()">Save Snippet</button>
-                <button onclick="cancelEdit()" id="cancelBtn" style="display:none;">Cancel</button>
+        <!-- User Status / Header Bar (visible when logged in) -->
+        <div id="authHeader" class="auth-header" style="display: none;">
+            <div class="auth-user-info">
+                <span>Logged in as: <strong id="loggedInUsername"></strong></span>
             </div>
+            <button id="logoutBtn" class="btn-logout" onclick="logout()">Logout</button>
         </div>
 
-        <!-- Snippet List -->
-        <div id="snippetList"></div>
+        <!-- Authentication Section (visible when logged out) -->
+        <div id="authSection" class="form-section auth-card">
+            <div class="auth-tabs">
+                <button id="tabLogin" class="tab-btn active" onclick="switchAuthTab('login')">Login</button>
+                <button id="tabRegister" class="tab-btn" onclick="switchAuthTab('register')">Register</button>
+            </div>
+            
+            <div id="authMessage" class="auth-message" style="display: none;"></div>
+
+            <form id="authForm" onsubmit="event.preventDefault(); handleAuthSubmit();">
+                <input type="text" id="authUsername" placeholder="Username *" autocomplete="username" required>
+                <input type="password" id="authPassword" placeholder="Password *" autocomplete="current-password" required>
+                <div class="form-buttons">
+                    <button type="submit" id="authSubmitBtn">Login</button>
+                </div>
+            </form>
+        </div>
+
+        <!-- Protected Snippet Section (visible only when logged in) -->
+        <div id="snippetAppSection" style="display: none;">
+            <!-- Search Bar -->
+            <div class="search-bar">
+                <input type="text" id="searchTitle" placeholder="Search by title...">
+                <input type="text" id="searchLanguage" placeholder="Search by language...">
+                <button id="searchBtn" onclick="searchSnippets()">Search</button>
+                <button id="clearSearchBtn" onclick="clearSearch()">Clear</button>
+            </div>
+
+            <!-- Add / Edit Form -->
+            <div class="form-section">
+                <h2 id="formTitle">Add New Snippet</h2>
+                <input type="hidden" id="editId">
+                <input type="text" id="title" placeholder="Title *" required>
+                <input type="text" id="language" placeholder="Language (e.g. Java, Python) *" required>
+                <textarea id="description" placeholder="Description (optional)" rows="2"></textarea>
+                <textarea id="code" placeholder="Paste your code here *" rows="6" required></textarea>
+                <div class="form-buttons">
+                    <button id="saveSnippetBtn" onclick="saveSnippet()">Save Snippet</button>
+                    <button id="cancelBtn" onclick="cancelEdit()" style="display:none;">Cancel</button>
+                </div>
+            </div>
+
+            <!-- Snippet List -->
+            <div id="snippetList"></div>
+        </div>
     </div>
 
     <script src="script.js"></script>

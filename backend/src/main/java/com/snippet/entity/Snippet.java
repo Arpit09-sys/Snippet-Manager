@@ -1,39 +1,59 @@
 package com.snippet.entity;
 
-import org.springframework.data.annotation.Id;
-import org.springframework.data.mongodb.core.index.Indexed;
-import org.springframework.data.mongodb.core.mapping.Document;
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import jakarta.persistence.*;
 
 import java.time.LocalDateTime;
 
-@Document(collection = "snippets")
+@Entity
+@Table(name = "snippets")
 public class Snippet {
 
     @Id
-    private String id;
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
 
+    @Column(nullable = false)
     private String title;
 
+    @Column(nullable = false, columnDefinition = "TEXT")
     private String code;
 
-    @Indexed
+    @Column(nullable = false)
     private String language;
 
+    @Column(columnDefinition = "TEXT")
     private String description;
 
+    @Column(nullable = false)
     private LocalDateTime createdAt;
 
-    // Default constructor
+    // Many snippets belong to one user (foreign key: user_id)
+    // @JsonIgnore ensures User entity (and its credentials) is never serialized with the snippet
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id", nullable = false)
+    @JsonIgnore
+    private User user;
+
     public Snippet() {
+    }
+
+    public Snippet(String title, String language, String description, String code, User user) {
+        this.title = title;
+        this.language = language;
+        this.description = description;
+        this.code = code;
+        this.user = user;
+        this.createdAt = LocalDateTime.now();
     }
 
     // Getters and Setters
 
-    public String getId() {
+    public Long getId() {
         return id;
     }
 
-    public void setId(String id) {
+    public void setId(Long id) {
         this.id = id;
     }
 
@@ -75,5 +95,13 @@ public class Snippet {
 
     public void setCreatedAt(LocalDateTime createdAt) {
         this.createdAt = createdAt;
+    }
+
+    public User getUser() {
+        return user;
+    }
+
+    public void setUser(User user) {
+        this.user = user;
     }
 }
