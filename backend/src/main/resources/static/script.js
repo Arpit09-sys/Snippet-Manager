@@ -1,7 +1,4 @@
-// Dynamically detect base URL: works both when served from Spring Boot (:8080) and file:/// or live-server
-const API_BASE = window.location.origin.includes(':8080')
-    ? '/api'
-    : 'http://localhost:8080/api';
+const API_BASE = '/api';
 
 let currentAuthMode = 'login'; // 'login' or 'register'
 
@@ -69,8 +66,7 @@ function handleAuthSubmit() {
     }
 
     if (currentAuthMode === 'register') {
-        // Register new account
-        fetch(`${API_BASE}/auth/register`, {
+        authFetch(`${API_BASE}/auth/register`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ username, password })
@@ -90,16 +86,14 @@ function handleAuthSubmit() {
             showAuthMessage(err.message, 'error');
         });
     } else {
-        // Login existing account
         loginUser(username, password);
     }
 }
 
 function loginUser(username, password) {
-    fetch(`${API_BASE}/auth/login`, {
+    authFetch(`${API_BASE}/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
         body: JSON.stringify({ username, password })
     })
     .then(async response => {
@@ -186,7 +180,7 @@ async function authFetch(url, options = {}) {
     }
 
     const response = await fetch(url, options);
-    if (response.status === 401) {
+    if (response.status === 401 && !url.includes('/auth/')) {
         showLoggedOut();
         throw new Error('Unauthorized. Please log in.');
     }
@@ -197,7 +191,7 @@ async function authFetch(url, options = {}) {
 // Snippet CRUD Operations (User-Scoped)
 // ----------------------------------------------------
 
-// Fetch and display snippets belonging to logged in user
+// Fetch and display snippets belonging to logged-in user
 function loadSnippets() {
     authFetch(`${API_BASE}/snippets`)
         .then(response => response.json())

@@ -15,9 +15,6 @@ public interface SnippetRepository extends JpaRepository<Snippet, Long> {
     // Get a specific snippet by id only if it belongs to the specified user
     Optional<Snippet> findByIdAndUser(Long id, User user);
 
-    // Check if snippet exists and belongs to the specified user
-    boolean existsByIdAndUser(Long id, User user);
-
     // Search user's snippets by language (case-insensitive)
     List<Snippet> findByUserAndLanguageIgnoreCase(User user, String language);
 

@@ -176,7 +176,19 @@ public class SnippetSecurityAndCrudIntegrationTest {
 
     @Test
     void testCsrfProtectionRejectsRequestWithoutCsrf() throws Exception {
-        // Register and login
+        // Registering without CSRF token is blocked with 403 Forbidden
+        mockMvc.perform(post("/api/auth/register")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of("username", "csrfUser", "password", "password123"))))
+                .andExpect(status().isForbidden());
+
+        // Logging in without CSRF token is blocked with 403 Forbidden
+        mockMvc.perform(post("/api/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of("username", "csrfUser", "password", "password123"))))
+                .andExpect(status().isForbidden());
+
+        // Register and login with CSRF token succeeds
         mockMvc.perform(post("/api/auth/register")
                         .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
@@ -198,6 +210,39 @@ public class SnippetSecurityAndCrudIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"title\":\"CSRF Attack\",\"language\":\"Java\",\"code\":\"badCode()\"}"))
                 .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void testClientProvidedIdIsIgnoredOnSnippetCreate() throws Exception {
+        mockMvc.perform(post("/api/auth/register")
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of("username", "idTester", "password", "password123"))))
+                .andExpect(status().isCreated());
+
+        MvcResult loginResult = mockMvc.perform(post("/api/auth/login")
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of("username", "idTester", "password", "password123"))))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        MockHttpSession session = (MockHttpSession) loginResult.getRequest().getSession();
+
+        // Attempt to pass an arbitrary client-provided ID (99999)
+        String payload = "{\"id\":99999,\"title\":\"Injected ID Snippet\",\"language\":\"Java\",\"code\":\"int x = 1;\"}";
+
+        MvcResult createResult = mockMvc.perform(post("/api/snippets")
+                        .session(session)
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(payload))
+                .andExpect(status().isCreated())
+                .andReturn();
+
+        Snippet created = objectMapper.readValue(createResult.getResponse().getContentAsString(), Snippet.class);
+        assertNotNull(created.getId());
+        assertNotEquals(99999L, created.getId());
     }
 
     @Test

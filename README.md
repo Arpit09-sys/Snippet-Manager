@@ -1,13 +1,13 @@
-# Developer Snippet Manager (Secure Edition)
+# Developer Snippet Manager
 
-A secure web application to save, organize, and search code snippets. Built with Spring Boot, Spring Data JPA, MySQL, Spring Security (BCrypt & session-based authentication), and Vanilla HTML/CSS/JavaScript.
+A web application to save, organize, and search code snippets. Built with Java 17, Spring Boot, Spring Data JPA, MySQL, Spring Security (BCrypt password hashing and session-based authentication), and Vanilla HTML/CSS/JavaScript.
 
 ## Project Structure
 
 ```
 snippet-manager/
 ├── backend/
-│   ├── pom.xml                                   ← Maven configuration with JPA, MySQL, Spring Security
+│   ├── pom.xml                                   ← Maven configuration
 │   ├── src/
 │   │   ├── main/
 │   │   │   ├── java/com/snippet/
@@ -17,26 +17,27 @@ snippet-manager/
 │   │   │   │   │   ├── AuthController.java       ← Register, login, status, CSRF endpoints
 │   │   │   │   │   └── SnippetController.java    ← User-scoped snippet CRUD & search
 │   │   │   │   ├── entity/
-│   │   │   │   │   ├── Snippet.java              ← JPA entity mapped to MySQL 'snippets' table
-│   │   │   │   │   └── User.java                 ← JPA entity mapped to MySQL 'users' table
+│   │   │   │   │   ├── Snippet.java              ← JPA entity for MySQL 'snippets' table
+│   │   │   │   │   └── User.java                 ← JPA entity for MySQL 'users' table
 │   │   │   │   ├── repository/
 │   │   │   │   │   ├── SnippetRepository.java    ← Spring Data JPA with user-ownership queries
-│   │   │   │   │   └── UserRepository.java       ← JPA repository for user lookup & existence checks
+│   │   │   │   │   └── UserRepository.java       ← JPA repository for user lookup
 │   │   │   │   ├── service/
-│   │   │   │   │   ├── CustomUserDetailsService.java ← Loads user for Spring Security authentication
+│   │   │   │   │   ├── CustomUserDetailsService.java ← Loads user for Spring Security
 │   │   │   │   │   ├── SnippetService.java       ← Business logic & ownership enforcement
 │   │   │   │   │   └── UserService.java          ← Registration with BCrypt hashing
 │   │   │   │   └── SnippetManagerApplication.java← Spring Boot main entry point
 │   │   │   └── resources/
-│   │   │       ├── application.properties        ← MySQL connection & Hibernate settings
+│   │   │       ├── application.properties        ← MySQL connection for snippetdb
 │   │   │       └── static/                       ← Frontend files served directly by Spring Boot
+│   │   │           ├── index.html
+│   │   │           ├── script.js
+│   │   │           └── style.css
 │   │   └── test/
-│   │       └── java/com/snippet/
-│   │           └── SnippetSecurityAndCrudIntegrationTest.java ← Automated test suite (10 test cases)
-├── frontend/
-│   ├── index.html                                ← UI with Login/Register tabs & Snippet Manager
-│   ├── style.css                                 ← Clean, responsive styling
-│   └── script.js                                 ← Session auth, CSRF handling & Fetch API calls
+│   │       ├── java/com/snippet/
+│   │       │   └── SnippetSecurityAndCrudIntegrationTest.java ← Automated integration test suite
+│   │       └── resources/
+│   │           └── application.properties        ← Test configuration pointing to snippetdb_test
 └── README.md
 ```
 
@@ -44,7 +45,7 @@ snippet-manager/
 
 ## Prerequisites
 
-- **Java 17+** (Java 21 LTS supported)
+- **Java 17+**
 - **Maven**
 - **MySQL Server** running on port 3306
 
@@ -54,16 +55,17 @@ snippet-manager/
 
 1. Start your local MySQL service:
    ```bash
-   brew services start mysql    # macOS (Homebrew)
+   brew services start mysql    # macOS
    # OR: sudo systemctl start mysql  # Linux
    ```
 
-2. Create the `snippetdb` database:
+2. Create the application database and the test database:
    ```bash
    mysql -u root -e "CREATE DATABASE IF NOT EXISTS snippetdb;"
+   mysql -u root -e "CREATE DATABASE IF NOT EXISTS snippetdb_test;"
    ```
 
-3. Spring Boot with Hibernate automatically generates the required `users` and `snippets` tables and foreign keys upon application startup (`spring.jpa.hibernate.ddl-auto=update`).
+3. Spring Data JPA with Hibernate automatically creates and updates the tables (`users`, `snippets`) upon startup (`spring.jpa.hibernate.ddl-auto=update`).
 
 ---
 
@@ -78,13 +80,15 @@ mvn spring-boot:run
 The application will start on `http://localhost:8080`.
 
 ### 2. Access the Frontend
-Open `http://localhost:8080` directly in your browser. (Alternatively, you can open `frontend/index.html` directly in your browser; the API calls will communicate with `http://localhost:8080`).
+Open `http://localhost:8080` in your web browser. The frontend is served directly by Spring Boot from `src/main/resources/static/`.
 
 ---
 
 ## Running Automated Tests
 
-To run the complete automated integration test suite:
+The integration test suite connects to the separate `snippetdb_test` database configured in `src/test/resources/application.properties` to ensure application data in `snippetdb` is not modified during testing.
+
+Make sure `snippetdb_test` is created before running tests:
 ```bash
 cd backend
 mvn test
@@ -95,16 +99,16 @@ mvn test
 ## API Endpoints
 
 ### Authentication (`/api/auth`)
-| Method | Endpoint | Description | Public / Protected |
-|--------|----------|-------------|--------------------|
-| POST | `/api/auth/register` | Register a new user | Public |
-| POST | `/api/auth/login` | Login and establish session | Public |
-| POST | `/api/auth/logout` | Invalidate session & clear cookies | Authenticated |
+| Method | Endpoint | Description | Access |
+|--------|----------|-------------|--------|
+| POST | `/api/auth/register` | Register a new user | Public (CSRF protected) |
+| POST | `/api/auth/login` | Login and establish session | Public (CSRF protected) |
+| POST | `/api/auth/logout` | Invalidate session & clear cookies | Authenticated (CSRF protected) |
 | GET | `/api/auth/status` | Check current authenticated user | Public |
 | GET | `/api/auth/csrf` | Get CSRF token for state-changing requests | Public |
 
 ### Snippets (`/api/snippets`)
-*All snippet endpoints require authentication. Operations are strictly isolated to the authenticated user.*
+*All snippet endpoints require authentication. Snippets are strictly isolated to the authenticated user.*
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
@@ -119,11 +123,12 @@ mvn test
 
 ---
 
-## Key Cybersecurity Features
+## Basic Security Measures
 
-1. **BCrypt Password Hashing**: Passwords are never stored in plain text. Stored passwords use BCrypt with salting and work factor 10.
-2. **Session-Based Authentication**: Uses standard Spring Security HTTP sessions with `JSESSIONID` cookie (`HttpOnly`).
-3. **User-Scoped Authorization & Ownership**: The backend resolves the authenticated user from the session and enforces that users can only read, edit, or delete snippets belonging to them. Tampered IDs return `404 Not Found`.
-4. **CSRF Protection**: State-changing requests (POST, PUT, DELETE) require a valid CSRF token using `CookieCsrfTokenRepository.withHttpOnlyFalse()` and the `X-XSRF-TOKEN` header.
-5. **SQL Injection Defense**: Built entirely on Spring Data JPA parameterized queries and method derivations—no raw string concatenations.
-6. **XSS Protection**: User-provided content is sanitized before rendering in the DOM using `escapeHtml()`.
+1. **BCrypt Password Hashing**: Passwords are saved as salted BCrypt hashes. Plain-text passwords are never stored in the database.
+2. **Session-Based Authentication**: Standard HTTP session management using the `JSESSIONID` cookie with `HttpOnly`.
+3. **User-Scoped Ownership**: The server determines the authenticated user from the session and restricts snippet queries to the current user via `findByIdAndUser(id, user)`.
+4. **ID Injection Prevention**: In snippet creation, the ID is explicitly set to `null` on the server so clients cannot force an existing ID.
+5. **CSRF Protection**: Enabled with `CookieCsrfTokenRepository.withHttpOnlyFalse()`. The frontend JavaScript sends the `X-XSRF-TOKEN` header on state-changing requests.
+6. **SQL Parameterization**: Spring Data JPA repository methods automatically use parameterized queries, preventing SQL injection.
+7. **Basic XSS Sanitization**: User-supplied values are escaped before rendering in the DOM.

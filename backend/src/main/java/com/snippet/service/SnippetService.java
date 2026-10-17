@@ -16,25 +16,23 @@ public class SnippetService {
     @Autowired
     private SnippetRepository snippetRepository;
 
-    // Get all snippets belonging to the authenticated user
     public List<Snippet> getAllSnippetsForUser(User user) {
         return snippetRepository.findByUser(user);
     }
 
-    // Get one snippet by id only if it belongs to the authenticated user
     public Optional<Snippet> getSnippetByIdForUser(Long id, User user) {
         return snippetRepository.findByIdAndUser(id, user);
     }
 
-    // Create a new snippet assigned to the authenticated user
     public Snippet createSnippet(Snippet snippet, User user) {
         validateSnippet(snippet);
+        // Explicitly set ID to null so clients cannot force an existing ID on creation
+        snippet.setId(null);
         snippet.setUser(user);
         snippet.setCreatedAt(LocalDateTime.now());
         return snippetRepository.save(snippet);
     }
 
-    // Update an existing snippet only if it belongs to the authenticated user
     public Optional<Snippet> updateSnippet(Long id, Snippet updatedData, User user) {
         Optional<Snippet> existing = snippetRepository.findByIdAndUser(id, user);
         if (existing.isEmpty()) {
@@ -52,7 +50,6 @@ public class SnippetService {
         return Optional.of(snippetRepository.save(snippet));
     }
 
-    // Delete a snippet only if it belongs to the authenticated user
     public boolean deleteSnippet(Long id, User user) {
         Optional<Snippet> existing = snippetRepository.findByIdAndUser(id, user);
         if (existing.isEmpty()) {
@@ -62,7 +59,6 @@ public class SnippetService {
         return true;
     }
 
-    // Search user's snippets by language and/or title
     public List<Snippet> searchSnippetsForUser(String language, String title, User user) {
         String cleanLanguage = (language != null && !language.trim().isEmpty()) ? language.trim() : null;
         String cleanTitle = (title != null && !title.trim().isEmpty()) ? title.trim() : null;
@@ -78,7 +74,6 @@ public class SnippetService {
         }
     }
 
-    // Basic input validation
     private void validateSnippet(Snippet snippet) {
         if (snippet.getTitle() == null || snippet.getTitle().trim().isEmpty()) {
             throw new IllegalArgumentException("Snippet title is required");

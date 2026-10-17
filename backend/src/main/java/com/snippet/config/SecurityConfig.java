@@ -15,29 +15,21 @@ import org.springframework.security.web.context.HttpSessionSecurityContextReposi
 import org.springframework.security.web.context.SecurityContextRepository;
 import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
 import org.springframework.security.web.csrf.CsrfTokenRequestAttributeHandler;
-import org.springframework.web.cors.CorsConfiguration;
-import org.springframework.web.cors.CorsConfigurationSource;
-import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
-
-import java.util.List;
 
 @Configuration
 @EnableWebSecurity
 public class SecurityConfig {
 
-    // Standard BCrypt password encoder (with default strength 10)
     @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
     }
 
-    // Expose AuthenticationManager to handle programmatic login in AuthController
     @Bean
     public AuthenticationManager authenticationManager(AuthenticationConfiguration authConfig) throws Exception {
         return authConfig.getAuthenticationManager();
     }
 
-    // SecurityContextRepository to explicitly save session authentication in Spring Security 6
     @Bean
     public SecurityContextRepository securityContextRepository() {
         return new HttpSessionSecurityContextRepository();
@@ -49,15 +41,10 @@ public class SecurityConfig {
         requestHandler.setCsrfRequestAttributeName(null);
 
         http
-            // Enable CORS for frontend flexibility
-            .cors(cors -> cors.configurationSource(corsConfigurationSource()))
-
-            // Enable CSRF with cookie repository (XSRF-TOKEN cookie readable by JavaScript)
+            // CSRF protection enabled for all state-changing endpoints
             .csrf(csrf -> csrf
                 .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
                 .csrfTokenRequestHandler(requestHandler)
-                // Registration and login are safe initial state-creation endpoints for unauthenticated users
-                .ignoringRequestMatchers("/api/auth/register", "/api/auth/login")
             )
 
             // URL Authorization Rules
@@ -66,17 +53,17 @@ public class SecurityConfig {
                 .requestMatchers("/", "/index.html", "/style.css", "/script.js", "/favicon.ico").permitAll()
                 // Authentication endpoints
                 .requestMatchers("/api/auth/**").permitAll()
-                // All snippet operations require authentication
+                // Snippet endpoints require authentication
                 .requestMatchers("/api/snippets/**").authenticated()
                 .anyRequest().authenticated()
             )
 
-            // Session-based authentication
+            // Session management
             .sessionManagement(session -> session
                 .sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED)
             )
 
-            // Return 401 Unauthorized for API requests instead of redirecting to HTML form
+            // Return 401 Unauthorized for unauthenticated API requests
             .exceptionHandling(ex -> ex
                 .authenticationEntryPoint((request, response, authException) -> {
                     response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
@@ -85,7 +72,7 @@ public class SecurityConfig {
                 })
             )
 
-            // Standard logout handler
+            // Logout handling
             .logout(logout -> logout
                 .logoutUrl("/api/auth/logout")
                 .logoutSuccessHandler((request, response, authentication) -> {
@@ -98,19 +85,5 @@ public class SecurityConfig {
             );
 
         return http.build();
-    }
-
-    // CORS configuration supporting credentials (cookies/session)
-    @Bean
-    public CorsConfigurationSource corsConfigurationSource() {
-        CorsConfiguration config = new CorsConfiguration();
-        config.setAllowedOriginPatterns(List.of("*"));
-        config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
-        config.setAllowedHeaders(List.of("*"));
-        config.setAllowCredentials(true);
-
-        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-        source.registerCorsConfiguration("/**", config);
-        return source;
     }
 }
